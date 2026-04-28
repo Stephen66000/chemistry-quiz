@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#2563eb">
+  <title>乐乐的化学复习魔幻之旅</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<header id="top-bar">
+  <button id="back-btn" class="icon-btn" aria-label="返回">←</button>
+  <h1 id="page-title">乐乐的化学复习魔幻之旅</h1>
+  <button id="stats-btn" class="icon-btn" aria-label="数据">📊</button>
+</header>
+
+<!-- 主内容区 -->
+<main id="app">
+
+  <!-- ① 首页：四大分类 -->
+  <section id="home-page" class="page active">
+    <div class="welcome">
+      <div class="welcome-greeting">卓阳 同学，今天也要加油哦 💪</div>
+      <div class="welcome-progress" id="welcome-progress">— / 165 知识点已掌握</div>
+    </div>
+
+    <div class="today-card" id="today-card">
+      <div class="today-title">📅 今日学习</div>
+      <div class="today-content" id="today-content">加载中...</div>
+      <button class="primary-btn" id="start-today-btn">开始今日闯关 →</button>
+    </div>
+
+    <h2 class="section-title">四大题库</h2>
+    <div class="category-grid">
+      <div class="category-card" data-category="必背">
+        <div class="cat-icon">📝</div>
+        <div class="cat-name">必背类</div>
+        <div class="cat-count" id="count-必背">0/90 知识点</div>
+        <div class="cat-desc">元素符号 · 方程式 · 化合价</div>
+        <div class="cat-progress"><div class="cat-progress-bar" id="bar-必背"></div></div>
+      </div>
+      <div class="category-card" data-category="必懂">
+        <div class="cat-icon">💡</div>
+        <div class="cat-name">必懂类</div>
+        <div class="cat-count" id="count-必懂">0/30 知识点</div>
+        <div class="cat-desc">原理 · 规律 · 操作</div>
+        <div class="cat-progress"><div class="cat-progress-bar" id="bar-必懂"></div></div>
+      </div>
+      <div class="category-card" data-category="易混">
+        <div class="cat-icon">⚠️</div>
+        <div class="cat-name">易混类</div>
+        <div class="cat-count" id="count-易混">0/25 知识点</div>
+        <div class="cat-desc">辨析 · 区分 · 易错</div>
+        <div class="cat-progress"><div class="cat-progress-bar" id="bar-易混"></div></div>
+      </div>
+      <div class="category-card" data-category="TOP20">
+        <div class="cat-icon">🎯</div>
+        <div class="cat-name">中考 TOP20</div>
+        <div class="cat-count" id="count-TOP20">0/20 知识点</div>
+        <div class="cat-desc">高频 · 综合 · 压轴</div>
+        <div class="cat-progress"><div class="cat-progress-bar" id="bar-TOP20"></div></div>
+      </div>
+    </div>
+
+    <h2 class="section-title">其他</h2>
+    <div class="other-grid">
+      <div class="other-card" id="wrong-book-card">
+        <div class="other-icon">📕</div>
+        <div class="other-text">
+          <div class="other-name">错题本</div>
+          <div class="other-count" id="wrong-count">0 道</div>
+        </div>
+      </div>
+      <div class="other-card" id="review-card">
+        <div class="other-icon">🔁</div>
+        <div class="other-text">
+          <div class="other-name">今日复习</div>
+          <div class="other-count" id="review-count">0 道到期</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② 知识点列表页 -->
+  <section id="kp-list-page" class="page">
+    <div class="kp-list-header" id="kp-list-header"></div>
+    <div class="kp-list" id="kp-list"></div>
+  </section>
+
+  <!-- ③ 答题页 -->
+  <section id="quiz-page" class="page">
+    <div class="quiz-header">
+      <div class="quiz-meta" id="quiz-meta"></div>
+      <div class="quiz-progress-bar"><div id="quiz-progress-fill"></div></div>
+    </div>
+
+    <div class="question-card">
+      <div class="question-tag" id="question-tag"></div>
+      <div class="question-stem" id="question-stem"></div>
+      <div class="question-options" id="question-options"></div>
+      <input type="text" id="question-fill" class="question-fill" placeholder="请输入答案" style="display:none">
+    </div>
+
+    <div class="quiz-actions">
+      <button class="primary-btn" id="submit-btn">提交答案</button>
+      <button class="primary-btn next-btn" id="next-btn" style="display:none">下一题 →</button>
+    </div>
+
+    <div class="explanation-card" id="explanation-card" style="display:none">
+      <div class="exp-result" id="exp-result"></div>
+      <div class="exp-correct" id="exp-correct"></div>
+      <div class="exp-text" id="exp-text"></div>
+      <div class="exp-related" id="exp-related"></div>
+    </div>
+  </section>
+
+  <!-- ④ 错题本页 -->
+  <section id="wrong-page" class="page">
+    <div class="wrong-tabs">
+      <button class="wrong-tab active" data-tab="due">今日复习</button>
+      <button class="wrong-tab" data-tab="all">全部错题</button>
+      <button class="wrong-tab" data-tab="mastered">已掌握</button>
+    </div>
+    <div class="wrong-list" id="wrong-list"></div>
+  </section>
+
+  <!-- ⑤ 数据统计页 -->
+  <section id="stats-page" class="page">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="stat-days">0</div><div class="stat-label">连续打卡</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-mastered">0</div><div class="stat-label">已掌握知识点</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-label">累计答题</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-rate">—</div><div class="stat-label">正确率</div></div>
+    </div>
+
+    <h3 class="section-title">分类掌握度</h3>
+    <div id="stats-categories"></div>
+
+    <h3 class="section-title">近 7 天</h3>
+    <div id="stats-week"></div>
+
+    <h3 class="section-title">进度备份</h3>
+    <div class="backup-zone">
+      <button class="backup-btn" id="export-btn">📤 导出进度（备份）</button>
+      <button class="backup-btn" id="import-btn">📥 导入进度（恢复）</button>
+      <div class="backup-tip">建议每周日导出一次，复制到微信收藏夹备份</div>
+    </div>
+
+    <div class="danger-zone">
+      <button class="danger-btn" id="reset-btn">重置所有进度</button>
+    </div>
+
+    <!-- 导出弹窗 -->
+    <div class="modal" id="export-modal">
+      <div class="modal-content">
+        <div class="modal-title">📤 导出进度</div>
+        <div class="modal-desc">长按下方文字 → 全选 → 复制 → 粘贴到微信收藏夹/备忘录</div>
+        <textarea id="export-text" readonly></textarea>
+        <div class="modal-actions">
+          <button class="modal-btn primary" id="copy-export-btn">一键复制</button>
+          <button class="modal-btn" id="close-export-btn">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 导入弹窗 -->
+    <div class="modal" id="import-modal">
+      <div class="modal-content">
+        <div class="modal-title">📥 导入进度</div>
+        <div class="modal-desc">从微信/备忘录复制备份文字，粘贴到下方框，点确认导入</div>
+        <textarea id="import-text" placeholder="在这里粘贴备份文字……"></textarea>
+        <div class="modal-actions">
+          <button class="modal-btn primary" id="confirm-import-btn">确认导入</button>
+          <button class="modal-btn" id="close-import-btn">取消</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- 提示 toast -->
+<div id="toast" class="toast"></div>
+
+<script src="questions.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

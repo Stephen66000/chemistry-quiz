@@ -1,0 +1,18 @@
+{
+  "name": "卓阳的化学复习魔幻之旅",
+  "short_name": "化学闯关",
+  "description": "九年级化学知识点闯关 + 艾宾浩斯错题本",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f6fa",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
