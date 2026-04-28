@@ -428,15 +428,24 @@ function showWrongStep(step, q) {
     : `正确答案：${q.answer}　你的答案：${userAnswer || '（空）'}`;
 
   if (step === 1) {
-    // 第一步：先重读题目
-    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 1 步：再读一次题目';
+    // 第 1 步：重读题目 + 题目结构分析（明确"问什么、答什么"）
+    const kp = getKp(q.kpId);
+    const analysis = analyzeQuestion(q);
+    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 1 步：先看清题目';
     document.getElementById('step-body').innerHTML = `
-      <div>别急着看答案。先回到题目，慢慢再读一遍——<strong>这道题到底在问什么？</strong></div>
+      <div style="color:#4b5563;font-size:14px;margin-bottom:8px;">📖 别急着看答案。先回到题目，慢慢再读一遍——</div>
       <div class="step-quote">${escapeHtml(q.stem)}</div>
-      <div style="color:#9ca3af;font-size:13px;">读完了吗？想想题目里有哪些关键词、哪些数据。</div>
+      <div style="color:#374151;font-size:14px;margin:14px 0 6px;">📋 把题目分析清楚：</div>
+      <div class="analyze-grid">
+        <div class="analyze-row"><span class="analyze-label">题　型</span><span>${analysis.type}</span></div>
+        <div class="analyze-row"><span class="analyze-label">答题要求</span><span>${analysis.requirement}</span></div>
+        ${analysis.keywords ? `<div class="analyze-row"><span class="analyze-label">注意关键词</span><span>${analysis.keywords}</span></div>` : ''}
+        <div class="analyze-row"><span class="analyze-label">考察知识</span><span class="step-kp" style="margin:0;">${kp.category}·${kp.title}</span></div>
+      </div>
+      <div style="color:#9ca3af;font-size:13px;margin-top:8px;">看清"问什么、答什么"了吗？再点下一步。</div>
     `;
     document.getElementById('step-actions').innerHTML = `
-      <button class="step-btn primary" id="step-next-btn">我读完了 →</button>
+      <button class="step-btn primary" id="step-next-btn">我看清了 →</button>
       <button class="step-btn secondary" id="step-skip-btn">跳过</button>
     `;
     document.getElementById('step-next-btn').onclick = () => showWrongStep(2, q);
@@ -445,27 +454,18 @@ function showWrongStep(step, q) {
       showFullExplanation(q, userAnswer, false);
     };
   } else if (step === 2) {
-    // 第二步：先分析题目（题型/答题要求/关键词）+ 启发提示
-    const kp = getKp(q.kpId);
-    const analysis = analyzeQuestion(q);
+    // 第 2 步：专属启发提示（针对内容怎么想）
     const hint = (typeof HINTS !== 'undefined' && HINTS[q.id])
       ? HINTS[q.id]
       : (q.type === 'choice'
           ? '想想：用到的核心规律是什么？哪些选项可以先排除？'
           : '想想：要填什么？用到哪个知识点？注意条件、配平、↑↓ 符号别漏。');
-    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 2 步：先看清题目要什么';
+    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 2 步：跟着启发想一想';
     document.getElementById('step-body').innerHTML = `
-      <div style="color:#374151;font-size:14px;margin-bottom:6px;">📋 先把题目分析清楚：</div>
-      <div class="analyze-grid">
-        <div class="analyze-row"><span class="analyze-label">题　型</span><span>${analysis.type}</span></div>
-        <div class="analyze-row"><span class="analyze-label">答题要求</span><span>${analysis.requirement}</span></div>
-        ${analysis.keywords ? `<div class="analyze-row"><span class="analyze-label">注意关键词</span><span>${analysis.keywords}</span></div>` : ''}
-        <div class="analyze-row"><span class="analyze-label">考察知识</span><span class="step-kp" style="margin:0;">${kp.category}·${kp.title}</span></div>
+      <div class="step-quote" style="background:#eff6ff;border-left-color:#2563eb;color:#1e3a8a;font-size:15px;line-height:1.7;">
+        💡 ${hint}
       </div>
-      <div class="step-quote" style="background:#eff6ff;border-left-color:#2563eb;color:#1e3a8a;margin-top:12px;">
-        💡 启发：${hint}
-      </div>
-      <div style="color:#9ca3af;font-size:13px;margin-top:6px;">看清问题 + 顺着启发推一推，再点下一步看答案。</div>
+      <div style="color:#9ca3af;font-size:13px;margin-top:8px;">顺着这个思路自己推一遍——主动思考比直接看答案有用 10 倍。</div>
     `;
     document.getElementById('step-actions').innerHTML = `
       <button class="step-btn primary" id="step-next-btn">我想过了，看答案 →</button>
