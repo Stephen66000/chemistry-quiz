@@ -445,23 +445,21 @@ function showWrongStep(step, q) {
       showFullExplanation(q, userAnswer, false);
     };
   } else if (step === 2) {
-    // 第二步：自己分析
+    // 第二步：自己分析（针对本题的具体启发）
     const kp = getKp(q.kpId);
-    const tips = q.type === 'choice'
-      ? `<li>题目里的<strong>关键词</strong>是什么？（数据、限定语、否定词）</li>
-         <li>这个知识点的<strong>核心规律</strong>是什么？</li>
-         <li>4 个选项中，哪些可以<strong>先排除</strong>？</li>
-         <li>排除后剩下的，怎么判断？</li>`
-      : `<li>题目要你<strong>填什么</strong>？（化学式、方程式、现象）</li>
-         <li>需要用到的<strong>核心知识</strong>是什么？</li>
-         <li>注意<strong>条件、配平、↑↓ 符号</strong>是否漏写？</li>`;
-    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 2 步：自己想一想';
+    const hint = (typeof HINTS !== 'undefined' && HINTS[q.id])
+      ? HINTS[q.id]
+      : (q.type === 'choice'
+          ? '想想：题目里的关键词、用到的核心规律、哪些选项可以先排除？'
+          : '想想：题目要填什么？用到哪个知识点？注意条件、配平、↑↓ 符号别漏。');
+    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 2 步：跟着启发想一想';
     document.getElementById('step-body').innerHTML = `
       <div>这道题考察的是：</div>
       <span class="step-kp">${kp.category}·${kp.title}</span>
-      <div style="margin-top:10px;">想一想：</div>
-      <ul class="step-list">${tips}</ul>
-      <div style="color:#9ca3af;font-size:13px;margin-top:8px;">想清楚了再点下一步——主动思考比直接看答案有用 10 倍。</div>
+      <div class="step-quote" style="background:#eff6ff;border-left-color:#2563eb;color:#1e3a8a;margin-top:10px;">
+        💡 ${hint}
+      </div>
+      <div style="color:#9ca3af;font-size:13px;margin-top:6px;">顺着这个思路自己推一下，再点下一步——主动思考比直接看答案有用 10 倍。</div>
     `;
     document.getElementById('step-actions').innerHTML = `
       <button class="step-btn primary" id="step-next-btn">我想过了，看答案 →</button>
