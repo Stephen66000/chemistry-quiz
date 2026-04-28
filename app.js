@@ -262,6 +262,7 @@ function showQuizQuestion() {
   document.getElementById('submit-btn').style.display = 'block';
   document.getElementById('next-btn').style.display = 'none';
   document.getElementById('explanation-card').style.display = 'none';
+  document.getElementById('step-card').style.display = 'none';
 
   showPage('quiz-page', { title: '答题中' });
 }
@@ -403,9 +404,85 @@ function updateStreak(today) {
 }
 
 function renderExplanation(q, userAnswer, isCorrect) {
+  // 答对：直接显示讲解
+  // 答错：先走三步引导，最后才显示讲解
+  document.getElementById('submit-btn').style.display = 'none';
+
+  if (isCorrect) {
+    showFullExplanation(q, userAnswer, true);
+  } else {
+    quizCtx.wrongUserAnswer = userAnswer;
+    showWrongStep(1, q);
+  }
+}
+
+function showWrongStep(step, q) {
+  const card = document.getElementById('step-card');
+  const expCard = document.getElementById('explanation-card');
+  expCard.style.display = 'none';
+  document.getElementById('next-btn').style.display = 'none';
+
+  const userAnswer = quizCtx.wrongUserAnswer;
+  const correctText = q.type === 'choice'
+    ? `正确答案：${q.answer}　你的答案：${userAnswer}`
+    : `正确答案：${q.answer}　你的答案：${userAnswer || '（空）'}`;
+
+  if (step === 1) {
+    // 第一步：先重读题目
+    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 1 步：再读一次题目';
+    document.getElementById('step-body').innerHTML = `
+      <div>别急着看答案。先回到题目，慢慢再读一遍——<strong>这道题到底在问什么？</strong></div>
+      <div class="step-quote">${escapeHtml(q.stem)}</div>
+      <div style="color:#9ca3af;font-size:13px;">读完了吗？想想题目里有哪些关键词、哪些数据。</div>
+    `;
+    document.getElementById('step-actions').innerHTML = `
+      <button class="step-btn primary" id="step-next-btn">我读完了 →</button>
+      <button class="step-btn secondary" id="step-skip-btn">跳过</button>
+    `;
+    document.getElementById('step-next-btn').onclick = () => showWrongStep(2, q);
+    document.getElementById('step-skip-btn').onclick = () => {
+      card.style.display = 'none';
+      showFullExplanation(q, userAnswer, false);
+    };
+  } else if (step === 2) {
+    // 第二步：自己分析
+    const kp = getKp(q.kpId);
+    const tips = q.type === 'choice'
+      ? `<li>题目里的<strong>关键词</strong>是什么？（数据、限定语、否定词）</li>
+         <li>这个知识点的<strong>核心规律</strong>是什么？</li>
+         <li>4 个选项中，哪些可以<strong>先排除</strong>？</li>
+         <li>排除后剩下的，怎么判断？</li>`
+      : `<li>题目要你<strong>填什么</strong>？（化学式、方程式、现象）</li>
+         <li>需要用到的<strong>核心知识</strong>是什么？</li>
+         <li>注意<strong>条件、配平、↑↓ 符号</strong>是否漏写？</li>`;
+    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 2 步：自己想一想';
+    document.getElementById('step-body').innerHTML = `
+      <div>这道题考察的是：</div>
+      <span class="step-kp">${kp.category}·${kp.title}</span>
+      <div style="margin-top:10px;">想一想：</div>
+      <ul class="step-list">${tips}</ul>
+      <div style="color:#9ca3af;font-size:13px;margin-top:8px;">想清楚了再点下一步——主动思考比直接看答案有用 10 倍。</div>
+    `;
+    document.getElementById('step-actions').innerHTML = `
+      <button class="step-btn primary" id="step-next-btn">我想过了，看答案 →</button>
+      <button class="step-btn secondary" id="step-back-btn">返回上一步</button>
+    `;
+    document.getElementById('step-next-btn').onclick = () => {
+      card.style.display = 'none';
+      showFullExplanation(q, userAnswer, false);
+    };
+    document.getElementById('step-back-btn').onclick = () => showWrongStep(1, q);
+  }
+
+  card.style.display = 'block';
+  // 滚动到引导卡
+  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+}
+
+function showFullExplanation(q, userAnswer, isCorrect) {
   const card = document.getElementById('explanation-card');
   card.classList.toggle('wrong', !isCorrect);
-  document.getElementById('exp-result').textContent = isCorrect ? '✓ 答对了！' : '✗ 答错了';
+  document.getElementById('exp-result').textContent = isCorrect ? '✓ 答对了！' : '✗ 答错了 · 完整讲解';
   document.getElementById('exp-result').className = 'exp-result ' + (isCorrect ? 'right' : 'wrong');
 
   const correctText = q.type === 'choice'
@@ -428,8 +505,13 @@ function renderExplanation(q, userAnswer, isCorrect) {
   }
 
   card.style.display = 'block';
-  document.getElementById('submit-btn').style.display = 'none';
   document.getElementById('next-btn').style.display = 'block';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }
 
 function nextQuestion() {

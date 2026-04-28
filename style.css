@@ -179,6 +179,51 @@ body {
 .primary-btn:disabled { background: #d1d5db; cursor: not-allowed; }
 .next-btn { background: #10b981; }
 
+/* ==================== 三步走引导卡（答错时） ==================== */
+.step-card {
+  background: #fff; border-radius: 14px; padding: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border-left: 4px solid #f59e0b;
+  margin-bottom: 12px;
+  animation: slideIn 0.3s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.step-header {
+  font-size: 16px; font-weight: 600; color: #b45309;
+  margin-bottom: 10px;
+}
+.step-body {
+  font-size: 14px; line-height: 1.7; color: #374151;
+  margin-bottom: 14px; white-space: pre-wrap;
+}
+.step-body .step-quote {
+  background: #fef3c7; border-left: 3px solid #f59e0b;
+  padding: 10px 12px; border-radius: 6px;
+  margin: 10px 0; font-size: 14px; color: #78350f;
+}
+.step-body .step-kp {
+  display: inline-block;
+  background: #dbeafe; color: #1d4ed8;
+  font-size: 13px; font-weight: 500;
+  padding: 4px 10px; border-radius: 10px;
+  margin: 4px 0;
+}
+.step-body ul.step-list {
+  margin: 8px 0 0 18px; padding: 0; list-style: disc;
+}
+.step-body ul.step-list li { margin-bottom: 6px; color: #4b5563; }
+.step-actions { display: flex; gap: 8px; }
+.step-btn {
+  flex: 1; padding: 12px; border: none;
+  border-radius: 10px; font-size: 14px; cursor: pointer;
+  font-family: inherit; font-weight: 500;
+}
+.step-btn.primary { background: #f59e0b; color: #fff; }
+.step-btn.secondary { background: #f3f4f6; color: #6b7280; flex: 0.6; }
+
 /* ==================== 答案讲解卡 ==================== */
 .explanation-card {
   background: #fff; border-radius: 14px; padding: 18px;
