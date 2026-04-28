@@ -215,6 +215,25 @@ body {
   margin: 8px 0 0 18px; padding: 0; list-style: disc;
 }
 .step-body ul.step-list li { margin-bottom: 6px; color: #4b5563; }
+
+.analyze-grid {
+  background: #f9fafb; border-radius: 8px;
+  padding: 10px 12px; font-size: 14px;
+}
+.analyze-row {
+  display: flex; gap: 12px; padding: 4px 0;
+  border-bottom: 1px dashed #e5e7eb;
+  align-items: center;
+}
+.analyze-row:last-child { border-bottom: none; }
+.analyze-label {
+  flex-shrink: 0; width: 70px;
+  color: #6b7280; font-size: 13px;
+  letter-spacing: 1px;
+}
+.analyze-row > span:not(.analyze-label):not(.step-kp) {
+  color: #1f2937; flex: 1;
+}
 .step-actions { display: flex; gap: 8px; }
 .step-btn {
   flex: 1; padding: 12px; border: none;

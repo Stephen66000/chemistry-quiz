@@ -445,21 +445,27 @@ function showWrongStep(step, q) {
       showFullExplanation(q, userAnswer, false);
     };
   } else if (step === 2) {
-    // 第二步：自己分析（针对本题的具体启发）
+    // 第二步：先分析题目（题型/答题要求/关键词）+ 启发提示
     const kp = getKp(q.kpId);
+    const analysis = analyzeQuestion(q);
     const hint = (typeof HINTS !== 'undefined' && HINTS[q.id])
       ? HINTS[q.id]
       : (q.type === 'choice'
-          ? '想想：题目里的关键词、用到的核心规律、哪些选项可以先排除？'
-          : '想想：题目要填什么？用到哪个知识点？注意条件、配平、↑↓ 符号别漏。');
-    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 2 步：跟着启发想一想';
+          ? '想想：用到的核心规律是什么？哪些选项可以先排除？'
+          : '想想：要填什么？用到哪个知识点？注意条件、配平、↑↓ 符号别漏。');
+    document.getElementById('step-header').innerHTML = '✗ 答错了 · 第 2 步：先看清题目要什么';
     document.getElementById('step-body').innerHTML = `
-      <div>这道题考察的是：</div>
-      <span class="step-kp">${kp.category}·${kp.title}</span>
-      <div class="step-quote" style="background:#eff6ff;border-left-color:#2563eb;color:#1e3a8a;margin-top:10px;">
-        💡 ${hint}
+      <div style="color:#374151;font-size:14px;margin-bottom:6px;">📋 先把题目分析清楚：</div>
+      <div class="analyze-grid">
+        <div class="analyze-row"><span class="analyze-label">题　型</span><span>${analysis.type}</span></div>
+        <div class="analyze-row"><span class="analyze-label">答题要求</span><span>${analysis.requirement}</span></div>
+        ${analysis.keywords ? `<div class="analyze-row"><span class="analyze-label">注意关键词</span><span>${analysis.keywords}</span></div>` : ''}
+        <div class="analyze-row"><span class="analyze-label">考察知识</span><span class="step-kp" style="margin:0;">${kp.category}·${kp.title}</span></div>
       </div>
-      <div style="color:#9ca3af;font-size:13px;margin-top:6px;">顺着这个思路自己推一下，再点下一步——主动思考比直接看答案有用 10 倍。</div>
+      <div class="step-quote" style="background:#eff6ff;border-left-color:#2563eb;color:#1e3a8a;margin-top:12px;">
+        💡 启发：${hint}
+      </div>
+      <div style="color:#9ca3af;font-size:13px;margin-top:6px;">看清问题 + 顺着启发推一推，再点下一步看答案。</div>
     `;
     document.getElementById('step-actions').innerHTML = `
       <button class="step-btn primary" id="step-next-btn">我想过了，看答案 →</button>
@@ -510,6 +516,49 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
+}
+
+// ============================================================
+// 题目结构分析（第 2 步用）
+// 自动识别题型、答题要求（要填几个空 / 4 选 1）、关键词
+// ============================================================
+function analyzeQuestion(q) {
+  const result = { type: '', requirement: '', keywords: '' };
+
+  if (q.type === 'choice') {
+    result.type = '单项选择题';
+    result.requirement = '在 4 个选项中选 1 个';
+  } else {
+    result.type = '填空题';
+    // 用答案的分号数估算空数（更准确）
+    const answerParts = String(q.answer || '').split(';').filter(s => s.trim()).length;
+    const blankMatches = (q.stem.match(/_{2,}/g) || []).length;
+    const blanks = Math.max(answerParts, blankMatches, 1);
+    result.requirement = blanks > 1 ? `要填 ${blanks} 个空（每空都要写对才算对）` : '填 1 个空';
+  }
+
+  // 检测题干关键词
+  const stem = q.stem;
+  const tags = [];
+  if (/[不没]能|无法|不可|不属于|不是|不会|不正确|错误的/.test(stem)) {
+    tags.push('找"<strong>不/错</strong>"的（反向选择）');
+  } else if (/正确的|对的/.test(stem)) {
+    tags.push('找"<strong>正确</strong>"的');
+  }
+  if (/最强|最大|最高|最多|最好|最低|最小|最少|最稳定|最活泼/.test(stem)) {
+    const m = stem.match(/最[强大高多好低小少稳活]/);
+    tags.push(`找"<strong>${m[0]}</strong>..."的`);
+  }
+  if (/一定/.test(stem)) tags.push('注意"<strong>一定</strong>"——要找绝对成立的');
+  if (/可能/.test(stem)) tags.push('注意"<strong>可能</strong>"——只要有一种情况成立即可');
+  if (/共存/.test(stem)) tags.push('"<strong>共存</strong>" = 互相不反应');
+  if (/足量/.test(stem)) tags.push('注意"<strong>足量</strong>"——某物过量了');
+  if (/恰好完全反应/.test(stem)) tags.push('"<strong>恰好完全反应</strong>"——两者都没剩');
+  if (/化学方程式/.test(stem)) tags.push('注意配平、条件、↑↓ 符号');
+  if (/现象/.test(stem)) tags.push('描述现象——颜色/气泡/沉淀/放热 等');
+
+  result.keywords = tags.join('；');
+  return result;
 }
 
 function nextQuestion() {
