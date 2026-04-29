@@ -34,6 +34,10 @@
     <div class="today-card" id="today-card">
       <div class="today-title">📅 今日学习</div>
       <div class="today-content" id="today-content">加载中...</div>
+      <div class="today-progress" id="today-progress" style="display:none">
+        <div class="today-progress-text" id="today-progress-text"></div>
+        <div class="today-progress-bar"><div class="today-progress-fill" id="today-progress-fill"></div></div>
+      </div>
       <button class="primary-btn" id="start-today-btn">开始今日闯关 →</button>
     </div>
 
@@ -162,6 +166,39 @@
 
     <div class="danger-zone">
       <button class="danger-btn" id="reset-btn">重置所有进度</button>
+    </div>
+
+    <h3 class="section-title">学习目标</h3>
+    <div class="settings-zone">
+      <button class="backup-btn" id="change-goal-btn">⏱ 调整每日学习时长</button>
+      <div class="backup-tip" id="current-goal-tip"></div>
+    </div>
+
+    <!-- 首次启动引导：选每日学习时长 -->
+    <div class="modal" id="onboarding-modal">
+      <div class="modal-content">
+        <div class="modal-title" style="text-align:center;font-size:19px;">🎉 欢迎，卓阳同学！</div>
+        <div class="modal-desc" style="text-align:center;">先定个小目标——你想每天用多少时间复习化学？</div>
+        <div class="goal-grid">
+          <div class="goal-card" data-mins="10">
+            <div class="goal-mins">10<span>分钟</span></div>
+            <div class="goal-tag">轻松</div>
+            <div class="goal-desc">每天来一点，慢慢积累。约 80 天读完全部</div>
+          </div>
+          <div class="goal-card recommended" data-mins="15">
+            <div class="goal-recommended-badge">推荐</div>
+            <div class="goal-mins">15<span>分钟</span></div>
+            <div class="goal-tag">标准</div>
+            <div class="goal-desc">不多不少刚刚好。约 60 天读完全部</div>
+          </div>
+          <div class="goal-card" data-mins="20">
+            <div class="goal-mins">20<span>分钟</span></div>
+            <div class="goal-tag">加油</div>
+            <div class="goal-desc">中考冲刺节奏。约 45 天读完全部</div>
+          </div>
+        </div>
+        <div style="text-align:center;color:#9ca3af;font-size:12px;margin-top:8px;">不用担心，之后随时可以调整</div>
+      </div>
     </div>
 
     <!-- 导出弹窗 -->

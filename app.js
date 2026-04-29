@@ -18,19 +18,34 @@ let quizCtx = null; // 当前答题上下文
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
-    try { return JSON.parse(raw); } catch (e) {}
+    try { return migrateState(JSON.parse(raw)); } catch (e) {}
   }
   return {
-    kpProgress: {},      // { kpId: { stars, correctQs: [], wrongQs: [], lastDate } }
-    wrongQuestions: {},  // { qId: { firstWrong, lastReview, nextReview, reviewLevel, mastered } }
+    kpProgress: {},
+    wrongQuestions: {},
+    settings: {
+      dailyMinutes: 0,    // 0 表示未设置（触发引导）
+      onboarded: false
+    },
     stats: {
       totalAnswered: 0,
       totalCorrect: 0,
+      totalMinutes: 0,
       streakDays: 0,
       lastActiveDate: null,
-      dailyHistory: {}   // { 'YYYY-MM-DD': { answered, correct } }
+      dailyHistory: {}    // { 'YYYY-MM-DD': { answered, correct, minutes } }
     }
   };
+}
+
+// 兼容老版本数据（缺字段时补默认）
+function migrateState(s) {
+  if (!s.settings) s.settings = { dailyMinutes: 0, onboarded: false };
+  if (typeof s.stats.totalMinutes !== 'number') s.stats.totalMinutes = 0;
+  Object.values(s.stats.dailyHistory || {}).forEach(d => {
+    if (typeof d.minutes !== 'number') d.minutes = 0;
+  });
+  return s;
 }
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -51,6 +66,40 @@ function showToast(msg) {
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 1800);
 }
+
+// ============================================================
+// 时长追踪（核心）
+// ============================================================
+let _timerStart = null;
+let _activePage = null;
+
+function startTimer() {
+  if (_timerStart) return; // 已启动
+  _timerStart = Date.now();
+}
+function stopTimer() {
+  if (!_timerStart) return;
+  const elapsed = (Date.now() - _timerStart) / 1000 / 60; // 分钟
+  _timerStart = null;
+  // 太短的不计（< 3 秒可能是误触）
+  if (elapsed < 0.05) return;
+  const today = todayStr();
+  if (!state.stats.dailyHistory[today]) {
+    state.stats.dailyHistory[today] = { answered: 0, correct: 0, minutes: 0 };
+  }
+  state.stats.dailyHistory[today].minutes = (state.stats.dailyHistory[today].minutes || 0) + elapsed;
+  state.stats.totalMinutes = (state.stats.totalMinutes || 0) + elapsed;
+  saveState();
+  // 更新首页时长进度（如果在首页）
+  if (_activePage === 'home-page') renderTodayProgress();
+}
+
+// 切换标签页/锁屏：暂停计时
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopTimer();
+  else if (_activePage === 'quiz-page') startTimer();
+});
+window.addEventListener('beforeunload', stopTimer);
 
 function getKp(kpId) { return KNOWLEDGE_POINTS.find(k => k.id === kpId); }
 function getQuestionsForKp(kpId) {
@@ -75,6 +124,11 @@ const PAGE_TITLES = {
   'stats-page': '学习数据'
 };
 function showPage(pageId, opts = {}) {
+  // 时长追踪：进入/离开 quiz-page
+  if (_activePage === 'quiz-page' && pageId !== 'quiz-page') stopTimer();
+  if (pageId === 'quiz-page' && _activePage !== 'quiz-page') startTimer();
+  _activePage = pageId;
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
   const title = opts.title || PAGE_TITLES[pageId] || '';
@@ -115,6 +169,36 @@ function renderHome() {
 
   // 今日学习推荐
   renderTodayRecommendation(dueCount);
+
+  // 今日学习进度
+  renderTodayProgress();
+
+  // 当前目标提示（设置区）
+  const goalTip = document.getElementById('current-goal-tip');
+  if (goalTip) {
+    const m = state.settings.dailyMinutes || 15;
+    goalTip.textContent = `当前目标：每天 ${m} 分钟`;
+  }
+}
+
+function renderTodayProgress() {
+  const today = todayStr();
+  const goal = state.settings.dailyMinutes || 0;
+  if (!goal) return; // 未设置目标
+  const todayMin = (state.stats.dailyHistory[today]?.minutes) || 0;
+  const pct = Math.min(100, todayMin / goal * 100);
+  const completed = todayMin >= goal;
+  const progressBox = document.getElementById('today-progress');
+  const text = document.getElementById('today-progress-text');
+  const fill = document.getElementById('today-progress-fill');
+  if (progressBox) {
+    progressBox.style.display = 'block';
+    text.innerHTML = completed
+      ? `<span>🎉 今日已学 ${todayMin.toFixed(1)} 分钟</span><span>已完成目标</span>`
+      : `<span>今日已学 ${todayMin.toFixed(1)} 分钟</span><span>目标 ${goal} 分钟</span>`;
+    fill.style.width = pct + '%';
+    fill.classList.toggle('completed', completed);
+  }
 }
 
 function renderTodayRecommendation(dueCount) {
@@ -642,7 +726,13 @@ function renderStats() {
     (s, c) => s + categoryMasteredCount(c), 0
   );
   document.getElementById('stat-mastered').textContent = totalMastered;
-  document.getElementById('stat-total').textContent = state.stats.totalAnswered;
+  // 把"累计答题"换成"累计学习时长"
+  const totalMin = Math.round(state.stats.totalMinutes || 0);
+  document.getElementById('stat-total').textContent = totalMin > 60
+    ? `${(totalMin/60).toFixed(1)}h`
+    : totalMin + '分';
+  const totalLabel = document.querySelector('#stat-total')?.parentElement?.querySelector('.stat-label');
+  if (totalLabel) totalLabel.textContent = '累计学习时长';
   const rate = state.stats.totalAnswered > 0
     ? Math.round(state.stats.totalCorrect / state.stats.totalAnswered * 100) + '%'
     : '—';
@@ -662,21 +752,36 @@ function renderStats() {
     `;
   }).join('');
 
-  // 近 7 天
+  // 近 7 天（含时长）
   const weekEl = document.getElementById('stats-week');
+  const goal = state.settings.dailyMinutes || 15;
   const today = new Date();
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today); d.setDate(d.getDate() - i);
     const ds = d.toISOString().slice(0, 10);
-    const h = state.stats.dailyHistory[ds] || { answered: 0, correct: 0 };
-    days.push({ date: ds.slice(5), answered: h.answered, correct: h.correct });
+    const h = state.stats.dailyHistory[ds] || { answered: 0, correct: 0, minutes: 0 };
+    days.push({
+      date: ds.slice(5),
+      answered: h.answered, correct: h.correct,
+      minutes: h.minutes || 0
+    });
   }
-  weekEl.innerHTML = days.map(d => `
+  weekEl.innerHTML = days.map(d => {
+    const minDisp = d.minutes > 0 ? `${d.minutes.toFixed(1)}分钟` : '—';
+    const qDisp = d.answered > 0 ? `${d.correct}/${d.answered} 题` : '';
+    const pct = Math.min(100, d.minutes / goal * 100);
+    const reached = d.minutes >= goal ? '✓' : '';
+    return `
     <div class="cat-stat-row">
-      <div class="cat-stat-name"><span>${d.date}</span><span>${d.answered ? d.correct + '/' + d.answered + ' 道' : '—'}</span></div>
+      <div class="cat-stat-name">
+        <span>${d.date} ${reached}</span>
+        <span>${minDisp}${qDisp ? ' · ' + qDisp : ''}</span>
+      </div>
+      <div class="cat-stat-bar"><div class="cat-stat-fill" style="width:${pct}%; background:${d.minutes >= goal ? '#10b981' : '#3b82f6'};"></div></div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // ============================================================
@@ -712,6 +817,31 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('进度已重置');
     }
   };
+
+  // 引导：每个目标卡片
+  document.querySelectorAll('.goal-card').forEach(card => {
+    card.onclick = () => {
+      const mins = parseInt(card.dataset.mins, 10);
+      state.settings.dailyMinutes = mins;
+      state.settings.onboarded = true;
+      saveState();
+      closeModal('onboarding-modal');
+      renderHome();
+      showToast(`已设定每日 ${mins} 分钟，加油！`);
+    };
+  });
+
+  // 调整目标
+  document.getElementById('change-goal-btn').onclick = () => {
+    document.getElementById('onboarding-modal').classList.add('show');
+  };
+
+  // 首次启动：未引导则弹窗
+  if (!state.settings.onboarded) {
+    setTimeout(() => {
+      document.getElementById('onboarding-modal').classList.add('show');
+    }, 300);
+  }
 
   // 导出/导入
   document.getElementById('export-btn').onclick = openExport;
