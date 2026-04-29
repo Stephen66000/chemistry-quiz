@@ -41,37 +41,42 @@
       <button class="primary-btn" id="start-today-btn">开始今日闯关 →</button>
     </div>
 
-    <h2 class="section-title">四大题库</h2>
-    <div class="category-grid">
-      <div class="category-card" data-category="必背">
-        <div class="cat-icon">📝</div>
-        <div class="cat-name">必背类</div>
-        <div class="cat-count" id="count-必背">0/90 知识点</div>
-        <div class="cat-desc">元素符号 · 方程式 · 化合价</div>
-        <div class="cat-progress"><div class="cat-progress-bar" id="bar-必背"></div></div>
+    <h2 class="section-title">教材章节闯关</h2>
+    <div class="chapter-grid" id="chapter-grid"></div>
+
+    <details class="topic-fold">
+      <summary>📑 按题型分类（必背 / 必懂 / 易混 / TOP20）</summary>
+      <div class="category-grid" style="margin-top:10px;">
+        <div class="category-card" data-category="必背">
+          <div class="cat-icon">📝</div>
+          <div class="cat-name">必背类</div>
+          <div class="cat-count" id="count-必背">0/30 知识点</div>
+          <div class="cat-desc">元素符号 · 方程式 · 化合价</div>
+          <div class="cat-progress"><div class="cat-progress-bar" id="bar-必背"></div></div>
+        </div>
+        <div class="category-card" data-category="必懂">
+          <div class="cat-icon">💡</div>
+          <div class="cat-name">必懂类</div>
+          <div class="cat-count" id="count-必懂">0/30 知识点</div>
+          <div class="cat-desc">原理 · 规律 · 操作</div>
+          <div class="cat-progress"><div class="cat-progress-bar" id="bar-必懂"></div></div>
+        </div>
+        <div class="category-card" data-category="易混">
+          <div class="cat-icon">⚠️</div>
+          <div class="cat-name">易混类</div>
+          <div class="cat-count" id="count-易混">0/25 知识点</div>
+          <div class="cat-desc">辨析 · 区分 · 易错</div>
+          <div class="cat-progress"><div class="cat-progress-bar" id="bar-易混"></div></div>
+        </div>
+        <div class="category-card" data-category="TOP20">
+          <div class="cat-icon">🎯</div>
+          <div class="cat-name">中考 TOP20</div>
+          <div class="cat-count" id="count-TOP20">0/20 知识点</div>
+          <div class="cat-desc">高频 · 综合 · 压轴</div>
+          <div class="cat-progress"><div class="cat-progress-bar" id="bar-TOP20"></div></div>
+        </div>
       </div>
-      <div class="category-card" data-category="必懂">
-        <div class="cat-icon">💡</div>
-        <div class="cat-name">必懂类</div>
-        <div class="cat-count" id="count-必懂">0/30 知识点</div>
-        <div class="cat-desc">原理 · 规律 · 操作</div>
-        <div class="cat-progress"><div class="cat-progress-bar" id="bar-必懂"></div></div>
-      </div>
-      <div class="category-card" data-category="易混">
-        <div class="cat-icon">⚠️</div>
-        <div class="cat-name">易混类</div>
-        <div class="cat-count" id="count-易混">0/25 知识点</div>
-        <div class="cat-desc">辨析 · 区分 · 易错</div>
-        <div class="cat-progress"><div class="cat-progress-bar" id="bar-易混"></div></div>
-      </div>
-      <div class="category-card" data-category="TOP20">
-        <div class="cat-icon">🎯</div>
-        <div class="cat-name">中考 TOP20</div>
-        <div class="cat-count" id="count-TOP20">0/20 知识点</div>
-        <div class="cat-desc">高频 · 综合 · 压轴</div>
-        <div class="cat-progress"><div class="cat-progress-bar" id="bar-TOP20"></div></div>
-      </div>
-    </div>
+    </details>
 
     <h2 class="section-title">其他</h2>
     <div class="other-grid">
@@ -109,7 +114,7 @@
       <div class="question-tag" id="question-tag"></div>
       <div class="question-stem" id="question-stem"></div>
       <div class="question-options" id="question-options"></div>
-      <input type="text" id="question-fill" class="question-fill" placeholder="请输入答案" style="display:none">
+      <div id="question-fill-container" class="question-fill-container" style="display:none"></div>
     </div>
 
     <div class="quiz-actions">

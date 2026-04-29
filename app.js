@@ -6,7 +6,22 @@
 // ---------- 常量 ----------
 const STORAGE_KEY = 'chem_quiz_v1';
 const EBBINGHAUS_INTERVALS = [1, 3, 7, 15]; // 错题复习间隔（天）
-const CATEGORY_TOTALS = { '必背': 90, '必懂': 30, '易混': 25, 'TOP20': 20 };
+const CATEGORY_TOTALS = { '必背': 30, '必懂': 30, '易混': 25, 'TOP20': 20 };
+
+// 教材章节定义（11 关）—— 绪论合并到第一章
+const CHAPTERS = [
+  { id: 1, units: [0, 1], icon: '🔬', name: '第一关：化学初识',         desc: '物质变化 · 实验基本操作' },
+  { id: 2, units: [2],    icon: '💨', name: '第二关：空气和氧气',       desc: '空气组成 · 氧气性质 · 制取' },
+  { id: 3, units: [3],    icon: '⚛️', name: '第三关：物质构成的奥秘',   desc: '分子原子 · 元素周期表' },
+  { id: 4, units: [4],    icon: '💧', name: '第四关：自然界的水',       desc: '水净化 · 水的组成 · 化学式' },
+  { id: 5, units: [5],    icon: '🧪', name: '第五关：化学方程式',       desc: '质量守恒 · 配平 · 计算' },
+  { id: 6, units: [6],    icon: '🪨', name: '第六关：碳和碳的氧化物',   desc: '碳单质 · CO/CO₂ · 制取' },
+  { id: 7, units: [7],    icon: '🔋', name: '第七关：能源的合理利用',   desc: '燃烧 · 化石能源 · 新能源' },
+  { id: 8, units: [8],    icon: '⚙️', name: '第八关：金属和金属材料',   desc: '金属性质 · 活动顺序 · 炼铁' },
+  { id: 9, units: [9],    icon: '🥤', name: '第九关：溶液',             desc: '溶液配制 · 溶解度 · 质量分数' },
+  { id: 10,units: [10],   icon: '🧂', name: '第十关：常见的酸和碱',     desc: '酸碱性质 · pH · 中和反应' },
+  { id: 11,units: [11],   icon: '🌍', name: '第十一关：化学与社会',     desc: '盐 · 化肥 · 营养 · 环保' },
+];
 
 // ---------- 状态 ----------
 let state = loadState();
@@ -113,6 +128,25 @@ function categoryMasteredCount(category) {
   return KNOWLEDGE_POINTS.filter(k => k.category === category && getKpStars(k.id) >= 3).length;
 }
 
+// 章节统计：返回 KP 总数、已掌握数、题数、已答数、星级
+function chapterStats(chapter) {
+  const kps = KNOWLEDGE_POINTS.filter(k => chapter.units.includes(k.unit));
+  const totalKps = kps.length;
+  const masteredKps = kps.filter(k => getKpStars(k.id) >= 3).length;
+  const totalQs = QUESTIONS.filter(q => kps.some(k => k.id === q.kpId)).length;
+  const answeredQs = kps.reduce((s, k) => {
+    const p = state.kpProgress[k.id];
+    return s + (p ? (p.correctQs || []).length : 0);
+  }, 0);
+  // 章节星级：按 KP 掌握比例
+  const ratio = totalKps > 0 ? masteredKps / totalKps : 0;
+  let stars = 0;
+  if (ratio >= 0.30) stars = 1;
+  if (ratio >= 0.60) stars = 2;
+  if (ratio >= 1.00) stars = 3;
+  return { totalKps, masteredKps, totalQs, answeredQs, stars, kps };
+}
+
 // ============================================================
 // 页面切换
 // ============================================================
@@ -152,13 +186,18 @@ function renderHome() {
   document.getElementById('welcome-progress').textContent =
     `${totalMastered} / ${totalKp} 知识点已掌握`;
 
-  // 各分类进度
+  // 各分类进度（折叠区）
   Object.keys(CATEGORY_TOTALS).forEach(cat => {
     const mastered = categoryMasteredCount(cat);
     const total = CATEGORY_TOTALS[cat];
-    document.getElementById(`count-${cat}`).textContent = `${mastered}/${total} 知识点`;
-    document.getElementById(`bar-${cat}`).style.width = `${(mastered / total) * 100}%`;
+    const elCount = document.getElementById(`count-${cat}`);
+    const elBar = document.getElementById(`bar-${cat}`);
+    if (elCount) elCount.textContent = `${mastered}/${total} 知识点`;
+    if (elBar) elBar.style.width = `${(mastered / total) * 100}%`;
   });
+
+  // 章节闯关（主入口）
+  renderChapterGrid();
 
   // 今日复习
   const dueCount = Object.values(state.wrongQuestions)
@@ -201,19 +240,103 @@ function renderTodayProgress() {
   }
 }
 
+function renderChapterGrid() {
+  const grid = document.getElementById('chapter-grid');
+  if (!grid) return;
+  grid.innerHTML = CHAPTERS.map(ch => {
+    const s = chapterStats(ch);
+    const pct = s.totalQs > 0 ? Math.min(100, s.answeredQs / s.totalQs * 100) : 0;
+    const starStr = '⭐'.repeat(s.stars) + '☆'.repeat(3 - s.stars);
+    const completed = s.stars === 3 ? 'completed' : '';
+    return `
+      <div class="chapter-card ${completed}" data-chapter="${ch.id}">
+        <div class="chapter-icon">${ch.icon}</div>
+        <div class="chapter-info">
+          <div class="chapter-name">${ch.name}</div>
+          <div class="chapter-meta">
+            <span>${s.masteredKps}/${s.totalKps} 知识点已掌握</span>
+            <span>·</span>
+            <span>${s.answeredQs}/${s.totalQs} 题</span>
+          </div>
+          <div class="chapter-progress-bar">
+            <div class="chapter-progress-fill" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div class="chapter-stars">${starStr}</div>
+      </div>
+    `;
+  }).join('');
+  grid.querySelectorAll('.chapter-card').forEach(card => {
+    card.onclick = () => {
+      const chId = parseInt(card.dataset.chapter, 10);
+      const ch = CHAPTERS.find(c => c.id === chId);
+      if (ch) showChapter(ch);
+    };
+  });
+}
+
+function showChapter(chapter) {
+  const s = chapterStats(chapter);
+  const sortedKps = s.kps.slice().sort((a, b) => {
+    const orderA = ['必背', '必懂', '易混', 'TOP20'].indexOf(a.category);
+    const orderB = ['必背', '必懂', '易混', 'TOP20'].indexOf(b.category);
+    return orderA - orderB;
+  });
+  document.getElementById('kp-list-header').innerHTML = `
+    <div class="h-title">${chapter.icon} ${chapter.name}</div>
+    <div class="h-desc">${chapter.desc}</div>
+    <div class="h-desc" style="margin-top:6px;color:#374151;">
+      <strong>${s.masteredKps}/${s.totalKps}</strong> 知识点已掌握 ·
+      <strong>${s.answeredQs}/${s.totalQs}</strong> 题已答 ·
+      ${'⭐'.repeat(s.stars) + '☆'.repeat(3 - s.stars)}
+    </div>
+  `;
+  const listEl = document.getElementById('kp-list');
+  listEl.innerHTML = sortedKps.map(kp => {
+    const stars = getKpStars(kp.id);
+    const starStr = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    const tag = `<span class="kp-cat-tag kp-cat-${kp.category}">${kp.category}</span>`;
+    return `
+      <div class="kp-item" data-kp="${kp.id}">
+        <div class="kp-info">
+          <div class="kp-title">${tag} ${kp.title}</div>
+          <div class="kp-tag">${kp.desc}</div>
+        </div>
+        <div class="kp-stars">${starStr}</div>
+      </div>
+    `;
+  }).join('');
+  listEl.querySelectorAll('.kp-item').forEach(el => {
+    el.onclick = () => enterKpQuiz(el.dataset.kp);
+  });
+  showPage('kp-list-page', { title: chapter.name });
+}
+
 function renderTodayRecommendation(dueCount) {
-  // 找未掌握的知识点（按必背→必懂→易混→TOP20 顺序）
-  const order = ['必背', '必懂', '易混', 'TOP20'];
+  // 找未通关的章节（按章节顺序）
+  let nextChapter = null;
   let nextKp = null;
-  for (const cat of order) {
-    nextKp = KNOWLEDGE_POINTS.find(k => k.category === cat && getKpStars(k.id) < 3);
-    if (nextKp) break;
+  for (const ch of CHAPTERS) {
+    const s = chapterStats(ch);
+    if (s.stars < 3) {
+      nextChapter = ch;
+      // 章节内找未掌握的 KP（按必背→必懂→易混→TOP20）
+      const order = ['必背', '必懂', '易混', 'TOP20'];
+      for (const cat of order) {
+        nextKp = s.kps.find(k => k.category === cat && getKpStars(k.id) < 3);
+        if (nextKp) break;
+      }
+      break;
+    }
   }
 
   const parts = [];
   if (dueCount > 0) parts.push(`📕 ${dueCount} 道错题到期复习`);
-  if (nextKp) parts.push(`📝 继续：${nextKp.category} · ${nextKp.title}`);
-  if (parts.length === 0) parts.push('🎉 全部知识点已掌握，去模拟考吧！');
+  if (nextChapter && nextKp) {
+    parts.push(`📚 继续闯：${nextChapter.name}`);
+    parts.push(`<span style="color:#9ca3af;font-size:13px;">下一关键点：${nextKp.title}</span>`);
+  }
+  if (parts.length === 0) parts.push('🎉 全部章节已通关，可以去模拟考啦！');
 
   document.getElementById('today-content').innerHTML = parts.join('<br>');
 
@@ -222,6 +345,8 @@ function renderTodayRecommendation(dueCount) {
       enterReviewMode();
     } else if (nextKp) {
       enterKpQuiz(nextKp.id);
+    } else if (nextChapter) {
+      showChapter(nextChapter);
     }
   };
 }
@@ -316,9 +441,10 @@ function showQuizQuestion() {
 
   // 选项 / 填空
   const optsEl = document.getElementById('question-options');
-  const fillEl = document.getElementById('question-fill');
+  const fillContainer = document.getElementById('question-fill-container');
   if (q.type === 'choice') {
-    fillEl.style.display = 'none';
+    fillContainer.style.display = 'none';
+    fillContainer.innerHTML = '';
     optsEl.style.display = 'flex';
     optsEl.innerHTML = q.options.map((opt, i) => {
       const letter = ['A', 'B', 'C', 'D'][i];
@@ -337,9 +463,37 @@ function showQuizQuestion() {
   } else {
     optsEl.style.display = 'none';
     optsEl.innerHTML = '';
-    fillEl.style.display = 'block';
-    fillEl.value = '';
-    fillEl.focus();
+    fillContainer.style.display = 'block';
+
+    // 检测空数：按答案的分号数
+    const blanks = (q.answer || '').toString().split(';').filter(x => x.trim()).length;
+    if (blanks <= 1) {
+      // 单空：一个大输入框
+      fillContainer.innerHTML = '<input type="text" class="fill-input single" placeholder="请输入答案">';
+    } else {
+      // 多空：N 个独立输入框
+      let html = '';
+      for (let i = 0; i < blanks; i++) {
+        html += `<div class="fill-row">
+          <span class="fill-label">第 ${i + 1} 空</span>
+          <input type="text" class="fill-input" data-idx="${i}" placeholder="第 ${i + 1} 空的答案">
+        </div>`;
+      }
+      fillContainer.innerHTML = html;
+      // 回车自动跳下一空
+      const inputs = fillContainer.querySelectorAll('input');
+      inputs.forEach((inp, i) => {
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (i < inputs.length - 1) inputs[i + 1].focus();
+            else document.getElementById('submit-btn').click();
+          }
+        });
+      });
+    }
+    const firstInput = fillContainer.querySelector('input');
+    if (firstInput) firstInput.focus();
   }
 
   // 提交按钮
@@ -368,10 +522,42 @@ function submitAnswer() {
       else if (el.dataset.letter === userAnswer && !isCorrect) el.classList.add('wrong');
     });
   } else {
-    userAnswer = document.getElementById('question-fill').value.trim();
-    if (!userAnswer) { showToast('请输入答案'); return; }
-    isCorrect = checkFillAnswer(userAnswer, q);
-    document.getElementById('question-fill').disabled = true;
+    const inputs = document.querySelectorAll('#question-fill-container .fill-input');
+    if (inputs.length === 1) {
+      // 单空填空
+      userAnswer = inputs[0].value.trim();
+      if (!userAnswer) { showToast('请输入答案'); return; }
+      isCorrect = checkFillAnswer(userAnswer, q);
+      inputs[0].disabled = true;
+      inputs[0].classList.add(isCorrect ? 'correct' : 'wrong');
+    } else {
+      // 多空填空：每个空独立判断 + 视觉反馈
+      const userValues = Array.from(inputs).map(i => i.value.trim());
+      if (userValues.some(v => !v)) { showToast('请把每个空都填完'); return; }
+      userAnswer = userValues.join(';');
+
+      const correctParts = q.answer.toString().split(';');
+      const norm = s => String(s).replace(/\s+/g, '').replace(/，/g, ',').replace(/；/g, ';').toLowerCase();
+      let allCorrect = true;
+      inputs.forEach((input, i) => {
+        const u = norm(userValues[i]);
+        const c = norm(correctParts[i] || '');
+        let match = u === c;
+        // 备选答案按 ; 拆分，每个空对应位置
+        if (!match && q.altAnswers) {
+          for (const alt of q.altAnswers) {
+            const altParts = alt.toString().split(';');
+            if (altParts[i] && norm(altParts[i]) === u) {
+              match = true; break;
+            }
+          }
+        }
+        input.classList.add(match ? 'correct' : 'wrong');
+        input.disabled = true;
+        if (!match) allCorrect = false;
+      });
+      isCorrect = allCorrect;
+    }
   }
 
   // 更新统计

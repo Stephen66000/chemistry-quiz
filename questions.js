@@ -144,10 +144,10 @@ const QUESTIONS = [
   },
   {
     id: 'q002', kpId: 'M001', type: 'fill', difficulty: 2,
-    stem: '请按周期顺序写出第二周期 8 个元素的元素符号（用空格隔开）：',
-    answer: 'Li Be B C N O F Ne',
-    altAnswers: ['Li,Be,B,C,N,O,F,Ne', 'Li、Be、B、C、N、O、F、Ne'],
-    explanation: '第二周期 8 个元素：锂、铍、硼、碳、氮、氧、氟、氖\n对应符号：Li Be B C N O F Ne\n\n💡 记忆口诀："锂铍硼碳氮，氧氟氖收尾"。\n\n第一周期只有 H He；第二周期 8 个；第三周期 8 个（Na Mg Al Si P S Cl Ar）；第四周期前 2 个是 K Ca。',
+    stem: '请按周期顺序写出第二周期 8 个元素的元素符号：',
+    answer: 'Li;Be;B;C;N;O;F;Ne',
+    altAnswers: [],
+    explanation: '第二周期 8 个元素：锂、铍、硼、碳、氮、氧、氟、氖\n对应符号：Li、Be、B、C、N、O、F、Ne\n\n💡 记忆口诀："锂铍硼碳氮，氧氟氖收尾"。\n\n第一周期只有 H He；第二周期 8 个；第三周期 8 个（Na Mg Al Si P S Cl Ar）；第四周期前 2 个是 K Ca。',
     relatedKps: ['M001']
   },
   {
@@ -172,10 +172,10 @@ const QUESTIONS = [
   },
   {
     id: 'q005', kpId: 'M002', type: 'fill', difficulty: 2,
-    stem: '请按从强到弱的顺序，写出金属活动性顺序前 6 位金属的元素符号（用空格隔开）：',
-    answer: 'K Ca Na Mg Al Zn',
-    altAnswers: ['K,Ca,Na,Mg,Al,Zn', 'K、Ca、Na、Mg、Al、Zn'],
-    explanation: '前 6 位：钾、钙、钠、镁、铝、锌 → K Ca Na Mg Al Zn\n\n口诀："钾钙钠镁铝，锌铁锡铅氢，铜汞银铂金"——前 6 位就是第一句加 1 个"锌"。',
+    stem: '请按从强到弱的顺序，写出金属活动性顺序前 6 位金属的元素符号：',
+    answer: 'K;Ca;Na;Mg;Al;Zn',
+    altAnswers: [],
+    explanation: '前 6 位：钾、钙、钠、镁、铝、锌 → K、Ca、Na、Mg、Al、Zn\n\n口诀："钾钙钠镁铝，锌铁锡铅氢，铜汞银铂金"——前 6 位就是第一句加 1 个"锌"。',
     relatedKps: ['M002']
   },
   {
