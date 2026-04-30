@@ -14,6 +14,21 @@
 </head>
 <body>
 
+<!-- 启动页 (Splash Screen) -->
+<div id="splash-screen" class="splash-screen">
+  <div class="splash-content">
+    <div class="splash-logo">
+      <div class="atom">
+        <div class="electron"></div>
+        <div class="electron"></div>
+        <div class="electron"></div>
+        <div class="nucleus"></div>
+      </div>
+    </div>
+    <div class="splash-title">乐乐的化学复习</div>
+    <div class="splash-subtitle">探索知识的每一个元素</div>
+  </div>
+</div>
 <!-- 顶部导航 -->
 <header id="top-bar">
   <button id="back-btn" class="icon-btn" aria-label="返回">←</button>
@@ -26,73 +41,110 @@
 
   <!-- ① 首页：四大分类 -->
   <section id="home-page" class="page active">
-    <div class="welcome">
-      <div class="welcome-greeting">卓阳 同学，今天也要加油哦 💪</div>
-      <div class="welcome-progress" id="welcome-progress">— / 165 知识点已掌握</div>
+    <!-- 中考倒计时横幅 -->
+    <div class="exam-countdown" id="exam-countdown">
+      <div class="ec-left">
+        <div class="ec-label">距离中考还有</div>
+        <div class="ec-days"><span id="ec-day-num">--</span> 天</div>
+      </div>
+      <div class="ec-right">
+        <div class="ec-streak">🔥 连续 <span id="ec-streak-num">0</span> 天</div>
+      </div>
     </div>
 
-    <div class="today-card" id="today-card">
-      <div class="today-title">📅 今日学习</div>
+    <!-- 欢迎卡片 -->
+    <div class="welcome-modern">
+      <div class="welcome-text">
+        <div class="greeting">早上好，卓阳！👋</div>
+        <div class="sub-greeting">继续保持你的化学复习进度！</div>
+        <div id="welcome-progress" style="display:none"></div>
+      </div>
+      <div class="welcome-circle">
+        <div class="circle-chart">
+          <svg viewBox="0 0 36 36" class="circular-chart blue">
+            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path class="circle" id="welcome-circle-fill" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <div class="circle-text">
+            <div class="pct" id="welcome-pct">0%</div>
+            <div class="lbl">已掌握</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 今日学习 -->
+    <div class="today-card-modern" id="today-card">
+      <div class="tc-header">
+        <div class="today-title">今日学习</div>
+      </div>
       <div class="today-content" id="today-content">加载中...</div>
-      <div class="today-progress" id="today-progress" style="display:none">
-        <div class="today-progress-text" id="today-progress-text"></div>
-        <div class="today-progress-bar"><div class="today-progress-fill" id="today-progress-fill"></div></div>
+      <div class="today-progress-modern" id="today-progress" style="display:none">
+        <div class="tp-text" id="today-progress-text"></div>
+        <div class="tp-bar"><div class="tp-fill" id="today-progress-fill"></div></div>
       </div>
-      <button class="primary-btn" id="start-today-btn">开始今日闯关 →</button>
+      <div style="text-align: right; margin-top: 10px;">
+        <button class="primary-btn-modern" id="start-today-btn">继续学习 →</button>
+      </div>
     </div>
 
+    <!-- 章节闯关 -->
     <h2 class="section-title">教材章节闯关</h2>
-    <div class="chapter-grid" id="chapter-grid"></div>
+    <!-- 外层加一个滚动容器 -->
+    <div class="chapter-scroll-wrapper">
+      <div class="chapter-grid-modern" id="chapter-grid"></div>
+    </div>
 
-    <details class="topic-fold">
-      <summary>📑 按题型分类（必背 / 必懂 / 易混 / TOP20）</summary>
-      <div class="category-grid" style="margin-top:10px;">
-        <div class="category-card" data-category="必背">
-          <div class="cat-icon">📝</div>
-          <div class="cat-name">必背类</div>
-          <div class="cat-count" id="count-必背">0/30 知识点</div>
-          <div class="cat-desc">元素符号 · 方程式 · 化合价</div>
-          <div class="cat-progress"><div class="cat-progress-bar" id="bar-必背"></div></div>
-        </div>
-        <div class="category-card" data-category="必懂">
-          <div class="cat-icon">💡</div>
-          <div class="cat-name">必懂类</div>
-          <div class="cat-count" id="count-必懂">0/30 知识点</div>
-          <div class="cat-desc">原理 · 规律 · 操作</div>
-          <div class="cat-progress"><div class="cat-progress-bar" id="bar-必懂"></div></div>
-        </div>
-        <div class="category-card" data-category="易混">
-          <div class="cat-icon">⚠️</div>
-          <div class="cat-name">易混类</div>
-          <div class="cat-count" id="count-易混">0/25 知识点</div>
-          <div class="cat-desc">辨析 · 区分 · 易错</div>
-          <div class="cat-progress"><div class="cat-progress-bar" id="bar-易混"></div></div>
-        </div>
-        <div class="category-card" data-category="TOP20">
-          <div class="cat-icon">🎯</div>
-          <div class="cat-name">中考 TOP20</div>
-          <div class="cat-count" id="count-TOP20">0/20 知识点</div>
-          <div class="cat-desc">高频 · 综合 · 压轴</div>
-          <div class="cat-progress"><div class="cat-progress-bar" id="bar-TOP20"></div></div>
+    <!-- 练习分类 -->
+    <h2 class="section-title">分类练习</h2>
+    <div class="category-grid-modern">
+      <div class="category-card-modern" data-category="必背">
+        <div class="c-icon-wrapper blue"><div class="c-icon">🧠</div></div>
+        <div class="c-info">
+          <div class="c-name">必背类</div>
+          <div class="c-tag blue" id="count-必背">0/30</div>
         </div>
       </div>
-    </details>
-
-    <h2 class="section-title">其他</h2>
-    <div class="other-grid">
-      <div class="other-card" id="wrong-book-card">
-        <div class="other-icon">📕</div>
-        <div class="other-text">
-          <div class="other-name">错题本</div>
-          <div class="other-count" id="wrong-count">0 道</div>
+      <div class="category-card-modern" data-category="必懂">
+        <div class="c-icon-wrapper green"><div class="c-icon">💡</div></div>
+        <div class="c-info">
+          <div class="c-name">必懂类</div>
+          <div class="c-tag green" id="count-必懂">0/30</div>
         </div>
       </div>
-      <div class="other-card" id="review-card">
-        <div class="other-icon">🔁</div>
-        <div class="other-text">
-          <div class="other-name">今日复习</div>
-          <div class="other-count" id="review-count">0 道到期</div>
+      <div class="category-card-modern" data-category="易混">
+        <div class="c-icon-wrapper orange"><div class="c-icon">❓</div></div>
+        <div class="c-info">
+          <div class="c-name">易混类</div>
+          <div class="c-tag orange" id="count-易混">0/25</div>
         </div>
+      </div>
+      <div class="category-card-modern" data-category="TOP20">
+        <div class="c-icon-wrapper yellow"><div class="c-icon">⭐</div></div>
+        <div class="c-info">
+          <div class="c-name">中考 TOP20</div>
+          <div class="c-tag yellow" id="count-TOP20">0/20</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 其他功能 -->
+    <div class="other-grid-modern">
+      <div class="other-card-modern" id="wrong-book-card">
+        <div class="o-icon-wrapper red"><div class="o-icon">📕</div></div>
+        <div class="o-info">
+          <div class="o-name">错题本</div>
+          <div class="o-tag red" id="wrong-count">复习 0 道</div>
+        </div>
+        <div class="o-arrow">›</div>
+      </div>
+      <div class="other-card-modern" id="review-card">
+        <div class="o-icon-wrapper purple"><div class="o-icon">🗓️</div></div>
+        <div class="o-info">
+          <div class="o-name">今日复习</div>
+          <div class="o-tag purple" id="review-count">0 道到期</div>
+        </div>
+        <div class="o-arrow">›</div>
       </div>
     </div>
   </section>
@@ -177,6 +229,25 @@
     <div class="settings-zone">
       <button class="backup-btn" id="change-goal-btn">⏱ 调整每日学习时长</button>
       <div class="backup-tip" id="current-goal-tip"></div>
+    </div>
+
+    <!-- 庆祝弹窗（每日目标达成 / 打卡里程碑 / 章节通关）-->
+    <div class="modal celebration-modal" id="celebration-modal">
+      <div class="modal-content celebration-content">
+        <div class="confetti-layer">
+          <div class="confetti">🎉</div>
+          <div class="confetti">✨</div>
+          <div class="confetti">🎊</div>
+          <div class="confetti">⭐</div>
+          <div class="confetti">🎉</div>
+          <div class="confetti">✨</div>
+        </div>
+        <div class="celebration-icon" id="celeb-icon">🏆</div>
+        <div class="celebration-title" id="celeb-title">恭喜！</div>
+        <div class="celebration-msg" id="celeb-msg"></div>
+        <div class="celebration-sub" id="celeb-sub"></div>
+        <button class="celebration-btn" id="celeb-close">继续加油 →</button>
+      </div>
     </div>
 
     <!-- 首次启动引导：选每日学习时长 -->

@@ -3,10 +3,31 @@
 // 功能：闯关 + 三星 + 艾宾浩斯错题本 + 进度追踪
 // ============================================================
 
+// ---------- 启动页逻辑 ----------
+window.addEventListener('load', () => {
+  const splash = document.getElementById('splash-screen');
+  if (splash) {
+    setTimeout(() => {
+      splash.classList.add('hidden');
+      // 动画结束后移除 DOM，避免影响后续点击
+      setTimeout(() => splash.remove(), 600);
+    }, 3000); // 改为 3 秒后开始淡出
+  }
+});
 // ---------- 常量 ----------
 const STORAGE_KEY = 'chem_quiz_v1';
 const EBBINGHAUS_INTERVALS = [1, 3, 7, 15]; // 错题复习间隔（天）
 const CATEGORY_TOTALS = { '必背': 30, '必懂': 30, '易混': 25, 'TOP20': 20 };
+const EXAM_DATE = '2026-06-18'; // 中考日期（约）
+const STREAK_MILESTONES = [3, 7, 14, 21, 30, 50];
+const STREAK_BADGES = {
+  3:  { icon: '🔥', title: '坚持 3 天！', sub: '习惯正在养成，继续加油' },
+  7:  { icon: '⚡', title: '连续 7 天！', sub: '一周不间断，了不起' },
+  14: { icon: '💎', title: '连续 14 天！', sub: '两周稳定刷题，进入状态' },
+  21: { icon: '🌟', title: '连续 21 天！', sub: '21 天养成习惯，化学已是日常' },
+  30: { icon: '🏆', title: '满 30 天！', sub: '一个月坚持，金牌选手' },
+  50: { icon: '👑', title: '连续 50 天！', sub: '从开始到中考，王者归来！' },
+};
 
 // 教材章节定义（11 关）—— 绪论合并到第一章
 const CHAPTERS = [
@@ -49,6 +70,10 @@ function loadState() {
       streakDays: 0,
       lastActiveDate: null,
       dailyHistory: {}    // { 'YYYY-MM-DD': { answered, correct, minutes } }
+    },
+    celebration: {
+      todayGoalShown: '',     // 上次显示"今日达标"的日期
+      milestonesShown: []     // 已展示过的打卡里程碑天数
     }
   };
 }
@@ -60,6 +85,9 @@ function migrateState(s) {
   Object.values(s.stats.dailyHistory || {}).forEach(d => {
     if (typeof d.minutes !== 'number') d.minutes = 0;
   });
+  if (!s.celebration) {
+    s.celebration = { todayGoalShown: '', milestonesShown: [] };
+  }
   return s;
 }
 function saveState() {
@@ -80,6 +108,80 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ============================================================
+// 中考倒计时
+// ============================================================
+function daysUntilExam() {
+  const today = new Date(todayStr());
+  const exam = new Date(EXAM_DATE);
+  const diff = Math.ceil((exam - today) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+
+function renderExamCountdown() {
+  const numEl = document.getElementById('ec-day-num');
+  const streakEl = document.getElementById('ec-streak-num');
+  const banner = document.getElementById('exam-countdown');
+  if (!numEl || !banner) return;
+  const days = daysUntilExam();
+  if (days < 0) {
+    banner.innerHTML = '<div class="ec-left"><div class="ec-label">中考已结束</div><div class="ec-days">辛苦了，卓阳！</div></div>';
+    return;
+  }
+  numEl.textContent = days;
+  if (streakEl) streakEl.textContent = state.stats.streakDays || 0;
+}
+
+// ============================================================
+// 庆祝弹窗
+// ============================================================
+function showCelebration({ icon, title, msg, sub }) {
+  document.getElementById('celeb-icon').textContent = icon || '🎉';
+  document.getElementById('celeb-title').textContent = title || '恭喜！';
+  document.getElementById('celeb-msg').textContent = msg || '';
+  document.getElementById('celeb-sub').textContent = sub || '';
+  document.getElementById('celebration-modal').classList.add('show');
+}
+
+// 检查是否触发各种庆祝（按优先级一次只显示一个，剩下的在下次进入主页时显示）
+function checkAllCelebrations() {
+  // 1. 打卡里程碑（最高优先级）
+  const streak = state.stats.streakDays || 0;
+  for (const m of STREAK_MILESTONES) {
+    if (streak >= m && !state.celebration.milestonesShown.includes(m)) {
+      state.celebration.milestonesShown.push(m);
+      saveState();
+      const badge = STREAK_BADGES[m];
+      showCelebration({
+        icon: badge.icon,
+        title: badge.title,
+        msg: `🔥 已经连续打卡 ${streak} 天`,
+        sub: badge.sub
+      });
+      return; // 一次只显示一个
+    }
+  }
+
+  // 2. 今日学习目标达成
+  const today = todayStr();
+  const goal = state.settings.dailyMinutes || 0;
+  if (goal > 0 && state.celebration.todayGoalShown !== today) {
+    const todayMin = (state.stats.dailyHistory[today]?.minutes) || 0;
+    if (todayMin >= goal) {
+      state.celebration.todayGoalShown = today;
+      saveState();
+      const days = daysUntilExam();
+      showCelebration({
+        icon: '🎯',
+        title: '今日目标达成！',
+        msg: `今天学了 ${todayMin.toFixed(1)} 分钟`,
+        sub: `连续打卡 ${streak} 天 · 距离中考 ${days} 天`
+      });
+      return;
+    }
+  }
 }
 
 // ============================================================
@@ -107,6 +209,8 @@ function stopTimer() {
   saveState();
   // 更新首页时长进度（如果在首页）
   if (_activePage === 'home-page') renderTodayProgress();
+  // 检查是否触发"今日目标达成"庆祝
+  checkAllCelebrations();
 }
 
 // 切换标签页/锁屏：暂停计时
@@ -183,21 +287,30 @@ function renderHome() {
     (s, c) => s + categoryMasteredCount(c), 0
   );
   const totalKp = Object.values(CATEGORY_TOTALS).reduce((s, n) => s + n, 0);
-  document.getElementById('welcome-progress').textContent =
-    `${totalMastered} / ${totalKp} 知识点已掌握`;
+  
+  // 更新进度环
+  const pct = totalKp > 0 ? Math.round((totalMastered / totalKp) * 100) : 0;
+  const circleFill = document.getElementById('welcome-circle-fill');
+  const pctText = document.getElementById('welcome-pct');
+  if (circleFill) circleFill.setAttribute('stroke-dasharray', `${pct}, 100`);
+  if (pctText) pctText.textContent = `${pct}%`;
 
-  // 各分类进度（折叠区）
+  // 各分类进度（更新标签）
   Object.keys(CATEGORY_TOTALS).forEach(cat => {
     const mastered = categoryMasteredCount(cat);
     const total = CATEGORY_TOTALS[cat];
     const elCount = document.getElementById(`count-${cat}`);
-    const elBar = document.getElementById(`bar-${cat}`);
     if (elCount) elCount.textContent = `${mastered}/${total} 知识点`;
-    if (elBar) elBar.style.width = `${(mastered / total) * 100}%`;
   });
 
   // 章节闯关（主入口）
   renderChapterGrid();
+
+  // 中考倒计时
+  renderExamCountdown();
+
+  // 进入主页时检查是否有未展示的庆祝
+  setTimeout(() => checkAllCelebrations(), 200);
 
   // 今日复习
   const dueCount = Object.values(state.wrongQuestions)
@@ -248,25 +361,21 @@ function renderChapterGrid() {
     const pct = s.totalQs > 0 ? Math.min(100, s.answeredQs / s.totalQs * 100) : 0;
     const starStr = '⭐'.repeat(s.stars) + '☆'.repeat(3 - s.stars);
     const completed = s.stars === 3 ? 'completed' : '';
+    // 现代风格卡片
     return `
-      <div class="chapter-card ${completed}" data-chapter="${ch.id}">
-        <div class="chapter-icon">${ch.icon}</div>
-        <div class="chapter-info">
-          <div class="chapter-name">${ch.name}</div>
-          <div class="chapter-meta">
-            <span>${s.masteredKps}/${s.totalKps} 知识点已掌握</span>
-            <span>·</span>
-            <span>${s.answeredQs}/${s.totalQs} 题</span>
-          </div>
-          <div class="chapter-progress-bar">
-            <div class="chapter-progress-fill" style="width:${pct}%"></div>
-          </div>
+      <div class="chapter-card-modern ${completed}" data-chapter="${ch.id}">
+        <div class="ch-icon-container">
+          <div class="ch-icon">${ch.icon}</div>
         </div>
-        <div class="chapter-stars">${starStr}</div>
+        <div class="ch-name">${ch.name.replace(/第.*关：/, '')}</div>
+        <div class="ch-meta">${s.answeredQs}/${s.totalQs} 题</div>
+        <div class="ch-bottom">
+           <div class="ch-stars">${starStr}</div>
+        </div>
       </div>
     `;
   }).join('');
-  grid.querySelectorAll('.chapter-card').forEach(card => {
+  grid.querySelectorAll('.chapter-card-modern').forEach(card => {
     card.onclick = () => {
       const chId = parseInt(card.dataset.chapter, 10);
       const ch = CHAPTERS.find(c => c.id === chId);
@@ -661,6 +770,7 @@ function addToWrongBook(q) {
 
 function updateStreak(today) {
   const last = state.stats.lastActiveDate;
+  const oldStreak = state.stats.streakDays || 0;
   if (!last) {
     state.stats.streakDays = 1;
   } else if (last === today) {
@@ -671,6 +781,10 @@ function updateStreak(today) {
     state.stats.streakDays = 1;
   }
   state.stats.lastActiveDate = today;
+  // 打卡天数变化时检查里程碑（在保存后异步触发）
+  if (state.stats.streakDays !== oldStreak) {
+    setTimeout(() => checkAllCelebrations(), 100);
+  }
 }
 
 function renderExplanation(q, userAnswer, isCorrect) {
@@ -1036,6 +1150,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('close-import-btn').onclick = () => closeModal('import-modal');
   document.getElementById('copy-export-btn').onclick = copyExport;
   document.getElementById('confirm-import-btn').onclick = doImport;
+
+  // 庆祝弹窗关闭：可能还有下一个待显示的庆祝
+  document.getElementById('celeb-close').onclick = () => {
+    closeModal('celebration-modal');
+    setTimeout(() => checkAllCelebrations(), 400); // 链式：可能还有下一个
+  };
 
   showPage('home-page');
 });
