@@ -503,6 +503,21 @@ body {
   padding-bottom: 12px; border-bottom: 1px solid #f3f4f6;
 }
 .exp-correct strong { color: #1f2937; }
+.self-grade-btn {
+  display: block; width: 100%;
+  margin-top: 10px; padding: 10px 14px;
+  background: #fef3c7; color: #92400e;
+  border: 1px solid #fcd34d; border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.self-grade-btn:active { transform: scale(0.98); }
+.self-grade-btn:hover { background: #fde68a; }
+.self-grade-btn.done {
+  background: #d1fae5; color: #065f46;
+  border-color: #6ee7b7; cursor: default;
+}
 .exp-text {
   font-size: 14px; line-height: 1.7; color: #374151;
   white-space: pre-wrap;

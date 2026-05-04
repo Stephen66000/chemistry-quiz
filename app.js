@@ -646,17 +646,16 @@ function submitAnswer() {
       userAnswer = userValues.join(';');
 
       const correctParts = q.answer.toString().split(';');
-      const norm = s => String(s).replace(/\s+/g, '').replace(/，/g, ',').replace(/；/g, ';').toLowerCase();
       let allCorrect = true;
       inputs.forEach((input, i) => {
-        const u = norm(userValues[i]);
-        const c = norm(correctParts[i] || '');
-        let match = u === c;
+        const userVal = userValues[i];
+        const correctVal = correctParts[i] || '';
+        let match = lenientMatch(userVal, correctVal);
         // 备选答案按 ; 拆分，每个空对应位置
         if (!match && q.altAnswers) {
           for (const alt of q.altAnswers) {
             const altParts = alt.toString().split(';');
-            if (altParts[i] && norm(altParts[i]) === u) {
+            if (altParts[i] && lenientMatch(userVal, altParts[i])) {
               match = true; break;
             }
           }
@@ -697,13 +696,89 @@ function submitAnswer() {
 }
 
 function checkFillAnswer(userAnswer, q) {
-  const norm = s => s.replace(/\s+/g, '').replace(/，/g, ',').replace(/；/g, ';').toLowerCase();
-  const u = norm(userAnswer);
-  if (norm(q.answer) === u) return true;
+  if (lenientMatch(userAnswer, q.answer)) return true;
   if (q.altAnswers) {
-    return q.altAnswers.some(alt => norm(alt) === u);
+    return q.altAnswers.some(alt => lenientMatch(userAnswer, alt));
   }
   return false;
+}
+
+// ============================================================
+// 宽容匹配：标点不敏感 + 同义词归一 + 中文长答案关键词命中
+// ============================================================
+const _CN_STOPWORDS = ['的', '了', '着', '过', '在', '是', '和', '也', '与', '有', '为', '之', '等', '将', '都', '把', '被', '所', '让', '使', '或', '又', '即', '其', '此', '该', '此', '便'];
+const _SYNONYMS = [
+  ['产生', '生成'], ['冒出', '生成'], ['释放', '放出'],
+  ['出现', '生成'], ['形成', '生成'],
+  ['气味', '味'],   // 有刺激性气味的气体 ↔ 刺激性气体
+  ['温度升高', '放热'], ['温度上升', '放热'],
+  ['一种', ''], ['现象', ''],
+];
+
+function _normalizeForMatch(s) {
+  let r = String(s)
+    .replace(/[\s，。、；：!！？?·　()（）"'""'']+/g, '')
+    .replace(/[₀⁰]/g, '0').replace(/[₁¹]/g, '1').replace(/[₂²]/g, '2')
+    .replace(/[₃³]/g, '3').replace(/[₄⁴]/g, '4').replace(/[₅⁵]/g, '5')
+    .replace(/[₆⁶]/g, '6').replace(/[₇⁷]/g, '7').replace(/[₈⁸]/g, '8')
+    .replace(/[₉⁹]/g, '9')
+    .replace(/[⁻]/g, '-').replace(/[⁺]/g, '+')
+    .toLowerCase();
+  return r;
+}
+
+function _stripStopwords(s) {
+  let r = s;
+  for (const sw of _CN_STOPWORDS) {
+    r = r.split(sw).join('');
+  }
+  return r;
+}
+
+function _applySynonyms(s) {
+  let r = s;
+  for (const [a, b] of _SYNONYMS) {
+    r = r.split(a).join(b);
+  }
+  return r;
+}
+
+function _extractKeywords(rawExpected) {
+  // 用标点和停用词切分，提取连续 2+ 中文字符作为关键词
+  let s = String(rawExpected).replace(/[\s，。、；：,.;!！？?·　()（）]+/g, '|');
+  for (const sw of _CN_STOPWORDS) {
+    s = s.split(sw).join('|');
+  }
+  return s.split('|').filter(k => /[一-龥]{2,}/.test(k) && k.length >= 2);
+}
+
+function lenientMatch(user, expected) {
+  if (!user || !expected) return false;
+  const u0 = _normalizeForMatch(user);
+  const e0 = _normalizeForMatch(expected);
+  if (u0 === e0) return true;
+
+  // 短答案（化学式/方程式/数字 等）：严格比较即可，不做语义宽容
+  // 含较多中文字才走语义宽容流程
+  const cnCount = (e0.match(/[一-龥]/g) || []).length;
+  if (cnCount < 4) return false;
+
+  // 1) 去停用词 + 同义词归一
+  const u1 = _applySynonyms(_stripStopwords(u0));
+  const e1 = _applySynonyms(_stripStopwords(e0));
+  if (u1 === e1) return true;
+
+  // 2) 关键词命中率 ≥ 70% 视为命中（描述性长答案兜底）
+  const keywords = _extractKeywords(expected);
+  if (keywords.length === 0) return false;
+  // 用户答案先做同义词归一，再判断每个关键词是否包含
+  const userBag = _applySynonyms(u0);
+  const expBag = _applySynonyms(e0);
+  const hits = keywords.filter(k => {
+    const kn = _applySynonyms(k);
+    return userBag.includes(kn) || userBag.includes(k);
+  }).length;
+  return (hits / keywords.length) >= 0.7;
 }
 
 function updateKpProgress(q, isCorrect) {
@@ -876,8 +951,55 @@ function showFullExplanation(q, userAnswer, isCorrect) {
   const correctText = q.type === 'choice'
     ? `正确答案：${q.answer}　你的答案：${userAnswer}`
     : `正确答案：${q.answer}　你的答案：${userAnswer || '（空）'}`;
-  document.getElementById('exp-correct').innerHTML = `<strong>${correctText}</strong>`;
+  // 答错且是填空题时：附带"我自己答对了"按钮
+  let overrideBtn = '';
+  if (!isCorrect && q.type === 'fill') {
+    overrideBtn = `<button class="self-grade-btn" id="self-grade-btn">✓ 我对照后觉得意思一样，记为答对</button>`;
+  }
+  document.getElementById('exp-correct').innerHTML = `<strong>${correctText}</strong>${overrideBtn}`;
   document.getElementById('exp-text').textContent = q.explanation;
+
+  // 绑定自评按钮
+  const selfBtn = document.getElementById('self-grade-btn');
+  if (selfBtn) {
+    selfBtn.onclick = () => {
+      // 改判为答对：移除错题、更新 KP 进度
+      if (state.wrongQuestions[q.id]) {
+        delete state.wrongQuestions[q.id];
+      }
+      const kpId = q.kpId;
+      if (!state.kpProgress[kpId]) {
+        state.kpProgress[kpId] = { stars: 0, correctQs: [], lastDate: null };
+      }
+      const p = state.kpProgress[kpId];
+      if (!p.correctQs.includes(q.id)) p.correctQs.push(q.id);
+      const correctDiffs = new Set(
+        p.correctQs.map(id => QUESTIONS.find(qq => qq.id === id)?.difficulty).filter(Boolean)
+      );
+      let newStars = 0;
+      if (correctDiffs.has(1)) newStars = 1;
+      if (correctDiffs.has(1) && correctDiffs.has(2)) newStars = 2;
+      if (correctDiffs.has(1) && correctDiffs.has(2) && correctDiffs.has(3)) newStars = 3;
+      if (newStars > p.stars) p.stars = newStars;
+      p.lastDate = todayStr();
+      // 更新统计
+      state.stats.totalCorrect++;
+      const today = todayStr();
+      if (state.stats.dailyHistory[today]) state.stats.dailyHistory[today].correct++;
+      saveState();
+      // UI 反馈
+      selfBtn.textContent = '✓ 已记为答对';
+      selfBtn.disabled = true;
+      selfBtn.classList.add('done');
+      // 标记当前轮答对
+      quizCtx.sessionCorrect++;
+      // 刷新结果文字
+      document.getElementById('exp-result').textContent = '✓ 已自评为答对';
+      document.getElementById('exp-result').className = 'exp-result right';
+      card.classList.remove('wrong');
+      showToast('已改判为答对，错题本已移除');
+    };
+  }
 
   // 关联知识点
   const relatedEl = document.getElementById('exp-related');
