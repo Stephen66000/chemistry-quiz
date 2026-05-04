@@ -421,6 +421,14 @@ body {
 .primary-btn:active { opacity: 0.85; }
 .primary-btn:disabled { background: #d1d5db; cursor: not-allowed; }
 .next-btn { background: #10b981; }
+.defer-btn {
+  flex: 0.8; background: #fff;
+  color: #92400e; border: 1.5px solid #fcd34d;
+  padding: 14px 16px; font-size: 14px; font-weight: 500;
+  border-radius: 12px; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.defer-btn:active { background: #fef3c7; transform: scale(0.98); }
 
 /* ==================== 三步走引导卡（答错时） ==================== */
 .step-card {

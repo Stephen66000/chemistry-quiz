@@ -496,11 +496,28 @@ function enterKpQuiz(kpId) {
   const kp = getKp(kpId);
   const allQs = getQuestionsForKp(kpId);
   if (allQs.length === 0) { showToast('该知识点暂无题目'); return; }
-  const progress = state.kpProgress[kpId] || { stars: 0, correctQs: [] };
-  // 找未答对的题，按难度顺序
-  const todoQs = allQs.filter(q => !progress.correctQs.includes(q.id));
-  // 全部做对了 → 全部重答（巩固）
-  const queue = todoQs.length > 0 ? todoQs : allQs;
+  const progress = state.kpProgress[kpId] || { stars: 0, correctQs: [], skippedUntil: {} };
+  const today = todayStr();
+  // 过滤：未答对 且 不在今日跳过名单
+  const todoQs = allQs.filter(q => {
+    if (progress.correctQs.includes(q.id)) return false;
+    const sk = progress.skippedUntil?.[q.id];
+    if (sk && sk > today) return false; // 还在跳过期内
+    return true;
+  });
+  // 如果全部都跳过了或全部都对了 → 用全部题巩固
+  let queue;
+  if (todoQs.length > 0) {
+    queue = todoQs;
+  } else {
+    const remaining = allQs.filter(q => !progress.correctQs.includes(q.id));
+    if (remaining.length > 0) {
+      // 还有未答对但都被跳过 → 提示用户
+      showToast('未答对的题已设置明天再做，今天先攻其他章节吧');
+      return;
+    }
+    queue = allQs; // 全部答对，重新巩固
+  }
   quizCtx = {
     mode: 'kp',
     kpId,
@@ -608,6 +625,7 @@ function showQuizQuestion() {
   // 提交按钮
   document.getElementById('submit-btn').style.display = 'block';
   document.getElementById('next-btn').style.display = 'none';
+  document.getElementById('defer-btn').style.display = 'none';
   document.getElementById('explanation-card').style.display = 'none';
   document.getElementById('step-card').style.display = 'none';
 
@@ -1016,6 +1034,42 @@ function showFullExplanation(q, userAnswer, isCorrect) {
 
   card.style.display = 'block';
   document.getElementById('next-btn').style.display = 'block';
+  // 答错时显示"今天先放过"按钮，方便跳出循环
+  const deferBtn = document.getElementById('defer-btn');
+  if (deferBtn) {
+    deferBtn.style.display = isCorrect ? 'none' : 'block';
+  }
+}
+
+// ============================================================
+// "今天先放过"：把当前题推迟到明天，退出当前轮
+// ============================================================
+function deferCurrentQuestion() {
+  if (!quizCtx || !quizCtx.queue) return;
+  const q = quizCtx.queue[quizCtx.index];
+  if (!q) return;
+  const tomorrow = addDays(todayStr(), 1);
+
+  if (quizCtx.mode === 'review') {
+    // 错题复习：推迟下次复习到明天
+    const w = state.wrongQuestions[q.id];
+    if (w) {
+      w.nextReview = tomorrow;
+      w.lastReview = todayStr();
+    }
+  } else {
+    // KP 闯关：标记 skippedUntil，今天不再出现
+    const kpId = q.kpId;
+    if (!state.kpProgress[kpId]) {
+      state.kpProgress[kpId] = { stars: 0, correctQs: [], skippedUntil: {}, lastDate: null };
+    }
+    if (!state.kpProgress[kpId].skippedUntil) state.kpProgress[kpId].skippedUntil = {};
+    state.kpProgress[kpId].skippedUntil[q.id] = tomorrow;
+  }
+  saveState();
+  showToast('好的，明天再来挑战 💪');
+  // 退回主页
+  setTimeout(() => showPage('home-page'), 500);
 }
 
 function escapeHtml(s) {
@@ -1230,6 +1284,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 答题按钮
   document.getElementById('submit-btn').onclick = submitAnswer;
   document.getElementById('next-btn').onclick = nextQuestion;
+  document.getElementById('defer-btn').onclick = deferCurrentQuestion;
   // 重置
   document.getElementById('reset-btn').onclick = () => {
     if (confirm('确定要重置所有进度吗？此操作不可撤销！')) {
