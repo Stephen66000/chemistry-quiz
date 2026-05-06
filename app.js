@@ -1126,7 +1126,6 @@ function nextQuestion() {
   if (quizCtx.index >= quizCtx.total) {
     finishQuizSession();
   } else {
-    document.getElementById('question-fill').disabled = false;
     showQuizQuestion();
   }
 }
