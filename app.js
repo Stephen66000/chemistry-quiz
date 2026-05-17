@@ -807,14 +807,25 @@ function updateKpProgress(q, isCorrect) {
   const p = state.kpProgress[kpId];
   if (isCorrect) {
     if (!p.correctQs.includes(q.id)) p.correctQs.push(q.id);
-    // 更新星级（按已答对的不同难度题数）
+    // 更新星级：按已答对的不同难度题 vs 该 KP 实际可用的难度
+    const allKpQs = getQuestionsForKp(kpId);
+    const availableDiffs = new Set(allKpQs.map(qq => qq.difficulty).filter(Boolean));
     const correctDiffs = new Set(
       p.correctQs.map(id => QUESTIONS.find(qq => qq.id === id)?.difficulty).filter(Boolean)
     );
+    // 计算星级：覆盖了所有可用难度 = 满星(3)，否则按覆盖比例
     let newStars = 0;
-    if (correctDiffs.has(1)) newStars = 1;
-    if (correctDiffs.has(1) && correctDiffs.has(2)) newStars = 2;
-    if (correctDiffs.has(1) && correctDiffs.has(2) && correctDiffs.has(3)) newStars = 3;
+    if (availableDiffs.size <= 2) {
+      // KP 只有 1-2 种难度题：全部答对即 3 星
+      const allCorrect = allKpQs.every(qq => p.correctQs.includes(qq.id));
+      if (allCorrect) newStars = 3;
+      else if (correctDiffs.size >= 1) newStars = correctDiffs.size;
+    } else {
+      // 标准 3 难度 KP
+      if (correctDiffs.has(1)) newStars = 1;
+      if (correctDiffs.has(1) && correctDiffs.has(2)) newStars = 2;
+      if (correctDiffs.has(1) && correctDiffs.has(2) && correctDiffs.has(3)) newStars = 3;
+    }
     if (newStars > p.stars) p.stars = newStars;
     p.lastDate = todayStr();
   } else {
@@ -991,13 +1002,21 @@ function showFullExplanation(q, userAnswer, isCorrect) {
       }
       const p = state.kpProgress[kpId];
       if (!p.correctQs.includes(q.id)) p.correctQs.push(q.id);
+      const allKpQs = getQuestionsForKp(kpId);
+      const availableDiffs = new Set(allKpQs.map(qq => qq.difficulty).filter(Boolean));
       const correctDiffs = new Set(
         p.correctQs.map(id => QUESTIONS.find(qq => qq.id === id)?.difficulty).filter(Boolean)
       );
       let newStars = 0;
-      if (correctDiffs.has(1)) newStars = 1;
-      if (correctDiffs.has(1) && correctDiffs.has(2)) newStars = 2;
-      if (correctDiffs.has(1) && correctDiffs.has(2) && correctDiffs.has(3)) newStars = 3;
+      if (availableDiffs.size <= 2) {
+        const allCorrect = allKpQs.every(qq => p.correctQs.includes(qq.id));
+        if (allCorrect) newStars = 3;
+        else if (correctDiffs.size >= 1) newStars = correctDiffs.size;
+      } else {
+        if (correctDiffs.has(1)) newStars = 1;
+        if (correctDiffs.has(1) && correctDiffs.has(2)) newStars = 2;
+        if (correctDiffs.has(1) && correctDiffs.has(2) && correctDiffs.has(3)) newStars = 3;
+      }
       if (newStars > p.stars) p.stars = newStars;
       p.lastDate = todayStr();
       // 更新统计
@@ -1264,7 +1283,7 @@ function renderStats() {
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   // 分类卡片
-  document.querySelectorAll('.category-card').forEach(card => {
+  document.querySelectorAll('.category-card-modern').forEach(card => {
     card.onclick = () => showCategory(card.dataset.category);
   });
   // 错题本/复习
