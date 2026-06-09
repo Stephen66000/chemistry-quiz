@@ -88,6 +88,10 @@ function migrateState(s) {
   if (!s.celebration) {
     s.celebration = { todayGoalShown: '', milestonesShown: [] };
   }
+  const cap = addDays(EXAM_DATE, -2);
+  Object.values(s.wrongQuestions || {}).forEach(w => {
+    if (!w.mastered && w.nextReview > EXAM_DATE) w.nextReview = cap;
+  });
   return s;
 }
 function saveState() {
@@ -844,6 +848,7 @@ function updateReviewProgress(q, isCorrect) {
       w.nextReview = '9999-12-31';
     } else {
       w.nextReview = addDays(todayStr(), EBBINGHAUS_INTERVALS[w.reviewLevel]);
+      if (w.nextReview > EXAM_DATE) w.nextReview = addDays(EXAM_DATE, -2);
     }
   } else {
     w.reviewLevel = 0;
